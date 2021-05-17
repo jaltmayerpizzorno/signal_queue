@@ -7,12 +7,13 @@ Python C++ extension that replicates some functionality from `queue.Queue`, but 
 to use within a Python signal handler.
 
 If you attempt to use `queue.Queue` from within a (Python) signal handler, you will
-likely run into a deadlock as it uses a `threading.Lock` and the signal may be delivered
-a second time after that lock has been acquired, and thus attempt to acquire the lock
-again.
+likely run into a deadlock: it uses a `threading.Lock` for thread safety, and a `Queue`
+operation may be interrupted for a signal delivery after the lock has been acquired.
+If the signal handler then attempts a `Queue` operation, it'll deadlock attempting to
+acquire the lock again.
 
-Starting a thread from a signal handler has the same issue, as starting it involves
-acquiring a lock or two.
+Starting a (Python) thread from a (Python) signal handler has the same issue, as starting
+it involves acquiring a lock or two.
 
 `signal_queue.Queue` makes use of the fact that Python signal handlers are only called
 from within the interpreter (i.e., can't interrupt native code).
