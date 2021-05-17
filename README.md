@@ -1,4 +1,5 @@
 # signal_queue
+[![license](https://img.shields.io/github/license/mashape/apistatus.svg)](LICENSE) 
 
 __Work-In-Progress__ -- some key functionality is still missing.
 
