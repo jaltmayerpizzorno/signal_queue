@@ -1,4 +1,5 @@
 # signal_queue
+[![license](https://img.shields.io/github/license/mashape/apistatus.svg)](LICENSE) 
 
 Python C++ extension that replicates (most of the) functionality from `queue.SimpleQueue`
 (which is available in Python 3.7+) and is safe to use within a Python signal handler.
