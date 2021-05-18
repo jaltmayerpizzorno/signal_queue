@@ -2,7 +2,7 @@
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg)](LICENSE) 
 
 Python C++ extension that replicates (most of the) functionality from `queue.SimpleQueue`
-(which is available in Python 3.7+) and is safe to use within a Python signal handler.
+(available in Python 3.7+) and is safe to use within a Python signal handler.
 
 ## Why it exists
 
@@ -21,10 +21,8 @@ from within the interpreter (i.e., can't interrupt native code).
 
 ## How to Use
 
-Import and instantiate `SimpleQueue` from `signal_queue` rather than `Queue` from `queue`,
-and use it in your signal handler:
+Pretty much like you'd use Python's `queue.SimpleQueue`:
 
-Instead of
 ```python
 import threading, signal
 from signal_queue import SimpleQueue
