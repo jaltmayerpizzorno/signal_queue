@@ -9,12 +9,12 @@ Python C++ extension that replicates (most of the) functionality from `queue.Sim
 I was looking for a way implement a producer-consumer queue for handling Python signals,
 and didn't realize `queue.SimpleQueue` was already reentrant.
 
-It turns out that if you attempt to use `queue.Queue` from within a (Python) signal handler,
+If you attempt to use `queue.Queue` from within a (Python) signal handler,
 a deadlock is likely to result: it uses a `threading.Lock` and a signal may be delivered
-a second time after that lock has been acquired, causing it to attempt to acquire the lock again.
+a second time after that lock has been acquired, causing it to attempt to acquire it again.
 
-Starting a thread from a signal handler has the same issue, as starting it involves acquiring a
-lock or two.
+Starting a thread (to handle that signal) from a signal handler has the same issue, as starting
+it involves acquiring a lock or two.
 
 `signal_queue.SimpleQueue` makes use of the fact that Python signal handlers are only called
 from within the interpreter (i.e., can't interrupt native code).
