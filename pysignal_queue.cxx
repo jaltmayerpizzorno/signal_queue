@@ -4,10 +4,8 @@
 #include <deque>
 #include <mutex>
 
-//#include <iostream>
 
-
-struct QueueObject {
+struct SimpleQueueObject {
   PyObject_HEAD
   std::mutex _m;
   std::condition_variable _cv;
@@ -16,10 +14,10 @@ struct QueueObject {
 
 
 static PyObject*
-Queue_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
-  QueueObject* self = (QueueObject*) type->tp_alloc(type, 0);
+SimpleQueue_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
+  SimpleQueueObject* self = (SimpleQueueObject*) type->tp_alloc(type, 0);
   if (self != nullptr) {
-    new (self) QueueObject;
+    new (self) SimpleQueueObject;
   }
 
   return (PyObject*)self;
@@ -27,15 +25,31 @@ Queue_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
 
 
 static void
-Queue_dealloc(QueueObject* self) {
-  self->~QueueObject();
+SimpleQueue_dealloc(SimpleQueueObject* self) {
+  self->~SimpleQueueObject();
   Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 
 static PyObject*
-Queue_put(QueueObject* self, PyObject* item) {
+SimpleQueue_qsize(SimpleQueueObject* self, PyObject* Py_UNUSED(ignored)) {
+  std::lock_guard<decltype(self->_m)> g(self->_m);
+  return PyLong_FromLong(self->_queue.size());
+}
+
+
+static PyObject*
+SimpleQueue_empty(SimpleQueueObject* self, PyObject* Py_UNUSED(ignored)) {
+  std::lock_guard<decltype(self->_m)> g(self->_m);
+  return PyBool_FromLong(self->_queue.size() == 0);
+}
+
+
+static PyObject*
+SimpleQueue_put(SimpleQueueObject* self, PyObject* item) {
   Py_INCREF(item);
+
+  // XXX add (but ignore) block=, timeout=
 
   {
     std::lock_guard<decltype(self->_m)> g(self->_m);
@@ -48,8 +62,10 @@ Queue_put(QueueObject* self, PyObject* item) {
 
 
 static PyObject*
-Queue_get(QueueObject* self, PyObject* Py_UNUSED(ignored)) {
+SimpleQueue_get(SimpleQueueObject* self, PyObject* Py_UNUSED(ignored)) {
   PyObject* item = nullptr;
+
+  // XXX add support for block=, timeout=
 
   Py_BEGIN_ALLOW_THREADS;
 
@@ -63,45 +79,31 @@ Queue_get(QueueObject* self, PyObject* Py_UNUSED(ignored)) {
 
   Py_END_ALLOW_THREADS;
 
-  // XXX don't need to drop a reference, right?
-
   return item;
 }
 
 
-static PyObject*
-Queue_task_done(QueueObject* self, PyObject* Py_UNUSED(ignored)) {
-  // XXX implement
-  Py_RETURN_NONE;
-}
-
-
-static PyObject*
-Queue_qsize(QueueObject* self, PyObject* Py_UNUSED(ignored)) {
-  std::lock_guard<decltype(self->_m)> g(self->_m);
-  return PyLong_FromLong(self->_queue.size());
-}
-
-
-static PyMethodDef Queue_methods[] = {
-  {"put", (PyCFunction)Queue_put, METH_O, "Adds an item to this queue's tail"},
-  {"get", (PyCFunction)Queue_get, METH_NOARGS, "Retrieves an item from this queue's head"},
-  {"task_done", (PyCFunction)Queue_task_done, METH_NOARGS, "Indicates a task is done"},
-  {"qsize", (PyCFunction)Queue_qsize, METH_NOARGS, "Returns this queue's size"},
+static PyMethodDef SimpleQueue_methods[] = {
+  {"qsize", (PyCFunction)SimpleQueue_qsize, METH_NOARGS, "Returns this queue's size"},
+  {"empty", (PyCFunction)SimpleQueue_empty, METH_NOARGS, "Returns whether this queue is empty"},
+  {"put", (PyCFunction)SimpleQueue_put, METH_O, "Adds an item to this queue's tail"},
+  // XXX add put_nowait
+  {"get", (PyCFunction)SimpleQueue_get, METH_NOARGS, "Retrieves an item from this queue's head"},
+  // XXX add get_nowait
   {NULL}
 };
 
 
-static PyTypeObject QueueType = {
+static PyTypeObject SimpleQueueType = {
   PyVarObject_HEAD_INIT(NULL, 0)
-  .tp_name = "signal_queue.Queue",
+  .tp_name = "signal_queue.SimpleQueue",
   .tp_doc = "Signal handler safe queue",
-  .tp_basicsize = sizeof(QueueObject),
+  .tp_basicsize = sizeof(SimpleQueueObject),
   .tp_itemsize = 0,
   .tp_flags = Py_TPFLAGS_DEFAULT,
-  .tp_new = Queue_new,
-  .tp_dealloc = (destructor) Queue_dealloc,
-  .tp_methods = Queue_methods,
+  .tp_new = SimpleQueue_new,
+  .tp_dealloc = (destructor) SimpleQueue_dealloc,
+  .tp_methods = SimpleQueue_methods,
 };
 
 
@@ -115,7 +117,7 @@ static struct PyModuleDef signal_queue_module = {
 
 PyMODINIT_FUNC
 PyInit_signal_queue() {
-  if (PyType_Ready(&QueueType) < 0) {
+  if (PyType_Ready(&SimpleQueueType) < 0) {
     return nullptr;
   }
 
@@ -124,9 +126,9 @@ PyInit_signal_queue() {
     return nullptr;
   }
 
-  Py_INCREF(&QueueType);
-  if (PyModule_AddObject(m, "Queue", (PyObject*) &QueueType) < 0) {
-    Py_DECREF(&QueueType);
+  Py_INCREF(&SimpleQueueType);
+  if (PyModule_AddObject(m, "SimpleQueue", (PyObject*) &SimpleQueueType) < 0) {
+    Py_DECREF(&SimpleQueueType);
     Py_DECREF(m);
     return nullptr;
   }

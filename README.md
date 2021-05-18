@@ -1,32 +1,34 @@
 # signal_queue
 
-__Work-In-Progress__ -- some key functionality is still missing.
+Python C++ extension that replicates (most of the) functionality from `queue.SimpleQueue`
+(which is available in Python 3.7+) and is safe to use within a Python signal handler.
 
-Python C++ extension that replicates some functionality from `queue.Queue`, but is safe
-to use within a Python signal handler.
+## Why it exists
 
-If you attempt to use `queue.Queue` from within a (Python) signal handler, you will
-likely run into a deadlock as it uses a `threading.Lock` and the signal may be delivered
-a second time after that lock has been acquired, and thus attempt to acquire the lock
-again.
+I was looking for a way implement a producer-consumer queue for handling Python signals,
+and didn't realize `queue.SimpleQueue` was already reentrant.
 
-Starting a thread from a signal handler has the same issue, as starting it involves
-acquiring a lock or two.
+It turns out that if you attempt to use `queue.Queue` from within a (Python) signal handler,
+a deadlock is likely to result: it uses a `threading.Lock` and a signal may be delivered
+a second time after that lock has been acquired, causing it to attempt to acquire the lock again.
 
-`signal_queue.Queue` makes use of the fact that Python signal handlers are only called
+Starting a thread from a signal handler has the same issue, as starting it involves acquiring a
+lock or two.
+
+`signal_queue.SimpleQueue` makes use of the fact that Python signal handlers are only called
 from within the interpreter (i.e., can't interrupt native code).
 
 ## How to Use
 
-Import and instantiate `Queue` from `signal_queue` rather than from the standard `queue`,
+Import and instantiate `SimpleQueue` from `signal_queue` rather than `Queue` from `queue`,
 and use it in your signal handler:
 
 Instead of
 ```python
 import threading, signal
-from signal_queue import Queue
+from signal_queue import SimpleQueue
 
-q = Queue()
+q = SimpleQueue()
 
 def handle_signal(signum, stack):
     q.put(stack)
@@ -35,7 +37,6 @@ def handler_thread():
     while True:
         item = q.get()
         ...
-        q.task_done()
 
 ...
 signal.signal(signal.SIGUSR1, handle_signal)

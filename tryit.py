@@ -1,8 +1,9 @@
-import signal, time, threading, queue, os
-import signal_queue
+import signal, time, threading, os
+#from queue import Queue    # this locks up because it uses a threading.Lock
+from signal_queue import SimpleQueue
+#from queue import SimpleQueue
 
-#q = queue.Queue()  # this locks up because it uses a threading.Lock
-q = signal_queue.Queue()
+q = SimpleQueue()
 
 count = 0;
 
@@ -14,7 +15,6 @@ def worker():
     global count
     while True:
         item = q.get()
-        q.task_done()
         count = count + 1
 
 def interrupter():
